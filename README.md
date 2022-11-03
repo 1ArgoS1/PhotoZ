@@ -1,4 +1,6 @@
-Photometric Redshift Prediction using Deep Neural Networks - Ambuj Kumar Pandit ( MIT2021100, IIITA)
+Prediction of Photometric Redshift from galaxy images using SDSS Dataset
+
+-------------------------------------------------------------------------------------------------------------------
 
 The Dataset is given in Data folder.
 The logs and model parameters with metric plots are in the folder logs.
