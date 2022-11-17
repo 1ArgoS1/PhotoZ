@@ -36,4 +36,9 @@ There are 6 python files in this project.
  	      
  	      $ python3 utils.py
 ------------------------------------------------------------------------------------------------------
-		
+Current result so far : 
+![Photometric Z vs Spectroscopic Z](https://github.com/1ArgoS1/PhotoZ/blob/main/run8train196.png "Mixed Input Model result")
+| Run no. | Loss  |  NMAD | MAE   | Bias  |% outlier|
+| :---:   | :---: | :---: | :---: | :---: | :---: |
+| 8       | 0.0170   | 0.015014   | 0.01606      | 0.000357      |   2.249      |
+| 12       | 0.0190   | 0.01660   | 0.01750      | 0.003357      |   2.362     |
