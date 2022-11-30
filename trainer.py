@@ -1,5 +1,6 @@
 #-----------------------------------------------------------------------------------------------
 from tqdm import tqdm
+import argparse
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -10,14 +11,32 @@ from torch.nn import functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
+#------------------------------------------------------
+# Run Parameters Initialisation
+#------------------------------------------------------
 
-# run parameters.
-BATCH_SIZE = 64
-learning_rate = 5e-3
-NUM_EPOCHS = 200
-NUM_WORKER = 2
-save_path = "./logs/"
-run_id = 9   # experiment id
+argparser = argparse.ArgumentParser(description='Process hyper-parameters')
+argparser.add_argument('--lr', type=float, default=1e-3, help='training rate')
+argparser.add_argument('--epochs', type=int, default=200, help='Number of epochs')
+argparser.add_argument('--num_worker', type=int, default=2, help='Number of workers feeding data')
+argparser.add_argument('--id',       type=int, default='1331', help='File prefix for marking output')
+argparser.add_argument('--batch_size',  type=int, default=64,   help='Batch Size of input')
+argparser.add_argument('--save_path', type=str,   default='./logs/', help='Directory for logging')
+argparser.add_argument('--step_lr',  type=int, default=15,   help='Step LR epoch decay')
+
+args = argparser.parse_args()
+
+BATCH_SIZE = args.batch_size
+learning_rate = args.lr
+NUM_EPOCHS = args.epochs
+NUM_WORKER = args.num_worker
+save_path = args.save_path
+run_id = args.id
+step_lr = args.step_lr
+print(f"Batch size : {BATCH_SIZE}, Learning rate : {learning_rate}")
+
+#-------------------------------------------------------
+# Dataset Initialisation
 #-------------------------------------------------------
 from utils import MyDataset
 
@@ -46,28 +65,34 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 if device :
     print("Using CUDA.")
+
 #---------------------------------------------------------------------
 # Define model and loss.
+#---------------------------------------------------------------------
+
 from utils import Metrics, format_, weight_init
 from models import *
 
-model = A3()
+# CoATNet model
+model = A5([32,32],5,[2, 3, 5, 3, 5],[128, 128, 256, 256, 256],['T','C','T','C']) 
 
 #print model summary.
 from torchinfo import summary
 summary(model,input_size=(BATCH_SIZE,5,32,32))
 
 model = model.cuda() if use_cuda else model
-model = model.apply(weight_init)
+model = model.apply(weight_init)   # weight initialisation 
 optimizer = optim.Adam(model.parameters(),lr=learning_rate, weight_decay=5e-4)
-criterion = nn.HuberLoss(delta=0.1,reduction="sum")
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10, gamma=0.1)
+criterion = nn.HuberLoss(delta=0.1,reduction="sum")   # Todo: try with `mean` also. 
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=step_lr, gamma=0.5) 
+# Todo: Decay lr s.t. metrics improve.  
 print("All initialisation done.")
 
 #------------------------------------------------------------------------------
-# Main loop
+# Training/Testing loop
+#------------------------------------------------------------------------------
+
 def run(model, dataloader, epochs):
-    # main loop
     min_loss = 10000 # setinel value.
     for epoch in range(epochs):
         print(f"Experiment no: {run_id} Epoch: {epoch+1}")
@@ -99,8 +124,7 @@ def run(model, dataloader, epochs):
             train_metrics.append(result)
         #generate report.
         ta,tb,tc,td,te = format_(train_metrics,fname+"train"+str(epoch+1))
-        print(f'Training | nmad: {round(tc,6)}, bias: {round(td,6)},\
-              loss: {round(ta,9)}, MAE: {round(tb,6)}, outliers %: {round(te,3)}')
+        print(f'Training | nmad: {round(tc,6)}, bias: {round(td,6)}, loss: {round(ta,9)}, MAE: {round(tb,6)}, outliers %: {round(te,3)}')
 
         #Testing Loop.
         model.eval()
@@ -122,8 +146,7 @@ def run(model, dataloader, epochs):
             test_metrics.append(result)
         #generate report.
         va,vb,vc,vd,ve = format_(test_metrics,fname+"test"+str(epoch+1))
-        print(f'Testing | nmad: {round(vc,6)}, bias: {round(vd,6)},\
-              loss: {round(va,9)}, MAE: {round(vb,6)}, outliers %: {round(ve,3)}')
+        print(f'Testing | nmad: {round(vc,6)}, bias: {round(vd,6)}, loss: {round(va,9)}, MAE: {round(vb,6)}, outliers %: {round(ve,3)}')
 
         #Saving the model.
         if va <= min_loss:
