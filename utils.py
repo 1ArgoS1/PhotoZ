@@ -53,8 +53,8 @@ class MyDataset(Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        x = self.data[index,:,:,:]
-        y = self.targets[index][5]
+        x = self.data[index,:,:,:].copy()  # copy() is to avoid mmap error
+        y = self.targets[index][5].copy()  # i.e. too many files open (>1024)
         if self.transform:
             x = self.transform(x)
         if self.mm == True:

@@ -38,16 +38,18 @@ print(f"Batch size : {BATCH_SIZE}, Learning rate : {learning_rate}")
 #-------------------------------------------------------
 # Dataset Initialisation
 #-------------------------------------------------------
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 from utils import MyDataset
 
 transform = transforms.Compose([transforms.ToTensor(),transforms.CenterCrop(32),transforms.RandomHorizontalFlip(),transforms.RandomVerticalFlip()])
 
-file = np.load("../data/cube_part1.npy")
-labels = np.load("../data/labels_part1.npy")
+file = np.load("../data/cube.npy", mmap_mode='r', fix_imports=True)
+labels = np.load("../data/labels.npy", mmap_mode='r', fix_imports=True)
 dataset = MyDataset(file, labels, mm=False, transform=transform)
 #del file
 #del labels
-# TODO: Reduce the ram requirements by closing the files.
+# TODO: Reduce the ram requirements by closing the files.update : DONE !!
 
 print("Data loading success!")
 
