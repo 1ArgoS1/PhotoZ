@@ -17,7 +17,7 @@ from torch.autograd import Variable
 
 argparser = argparse.ArgumentParser(description='Process hyper-parameters')
 argparser.add_argument('--lr', type=float, default=1e-3, help='training rate')
-argparser.add_argument('--epochs', type=int, default=200, help='Number of epochs')
+argparser.add_argument('--epochs', type=int, default=100, help='Number of epochs')
 argparser.add_argument('--num_worker', type=int, default=2, help='Number of workers feeding data')
 argparser.add_argument('--id',       type=int, default='1331', help='File prefix for marking output')
 argparser.add_argument('--batch_size',  type=int, default=64,   help='Batch Size of input')
@@ -76,18 +76,18 @@ from utils import Metrics, format_, weight_init
 from models import *
 
 # CoATNet model
-model = A5([32,32],5,[2, 3, 5, 3, 5],[128, 128, 256, 256, 256],['T','C','T','C']) 
+model = A5([32,32],5,[2, 3, 5, 3, 5],[128, 128, 256, 256, 256],['T','C','T','C'])
 
 #print model summary.
 from torchinfo import summary
 summary(model,input_size=(BATCH_SIZE,5,32,32))
 
 model = model.cuda() if use_cuda else model
-model = model.apply(weight_init)   # weight initialisation 
+model = model.apply(weight_init)   # weight initialisation
 optimizer = optim.Adam(model.parameters(),lr=learning_rate, weight_decay=5e-4)
-criterion = nn.HuberLoss(delta=0.1,reduction="sum")   # Todo: try with `mean` also. 
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=step_lr, gamma=0.5) 
-# Todo: Decay lr s.t. metrics improve.  
+criterion = nn.HuberLoss(delta=0.1,reduction="sum")   # Todo: try with `mean` also.
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=step_lr, gamma=0.5)
+# Todo: Decay lr s.t. metrics improve.
 print("All initialisation done.")
 
 #------------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 # Ambuj Kumar Pandit - Photometric Redshift prediction using mixed model input
 #-----------------------------------------------------------------------------------------------
 from tqdm import tqdm
+import argparse
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -11,25 +12,41 @@ from torch.nn import functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
+#-------------------------------------------------------------
+# Run Parameters Initialisation
+#-------------------------------------------------------------
+argparser = argparse.ArgumentParser(description='Process hyper-parameters')
+argparser.add_argument('--lr', type=float, default=1e-3, help='training rate')
+argparser.add_argument('--epochs', type=int, default=100, help='Number of epochs')
+argparser.add_argument('--num_worker', type=int, default=2, help='Number of workers feeding dat      a')
+argparser.add_argument('--id',       type=int, default='1331', help='File prefix for marking ou      tput')
+argparser.add_argument('--batch_size',  type=int, default=64,   help='Batch Size of input')
+argparser.add_argument('--save_path', type=str,   default='./logs/', help='Directory for loggin      g')
+argparser.add_argument('--step_lr',  type=int, default=15,   help='Step LR epoch decay')
 
-# run parameters.
-BATCH_SIZE = 64
-learning_rate = 3e-4
-NUM_EPOCHS = 200
-NUM_WORKER = 2
-save_path = "./logs/"
-run_id = 10 #experiment id
+args = argparser.parse_args()
+
+BATCH_SIZE = args.batch_size
+learning_rate = args.lr
+NUM_EPOCHS = args.epochs
+NUM_WORKER = args.num_worker
+save_path = args.save_path
+run_id = args.id
+step_lr = args.step_lr
+
+print(f"Batch size : {BATCH_SIZE}, Learning rate : {learning_rate}")
 #-------------------------------------------------------
+# Dataset Initialisation
+#-------------------------------------------------------
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 from utils import MyDataset
 
 transform = transforms.Compose([transforms.ToTensor(),transforms.CenterCrop(32),transforms.RandomHorizontalFlip(),transforms.RandomVerticalFlip()])
 
-file = np.load("../data/cube_part1.npy") 
-labels = np.load("../data/labels_part1.npy")
+file = np.load("../data/cube.npy", mmap_mode='r', fix_imports=True)
+labels = np.load("../data/labels.npy", mmap_mode='r', fix_imports=True)
 dataset = MyDataset(file, labels, mm=True, transform=transform)
-#del file
-#del labels
-# TODO: Reduce the ram requirements by closing the files.
 
 print("Data loading success!")
 
@@ -49,6 +66,7 @@ if device :
     print("Using CUDA.")
 #---------------------------------------------------------------------
 # Define model and loss.
+#---------------------------------------------------------------------
 from utils import Metrics,format_,weight_init
 from models import *
 
@@ -65,7 +83,8 @@ scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10, gamma=0.1)
 print("All initialisation done.")
 
 #------------------------------------------------------------------------------
-# Main loop
+# Training/Testing loop
+#------------------------------------------------------------------------------
 def run(model, dataloader, epochs):
     # main loop
     min_loss = 10000 # setinel value.
