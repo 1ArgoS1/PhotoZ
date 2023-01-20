@@ -78,7 +78,9 @@ summary(model,batch_dim=BATCH_SIZE)
 model = model.cuda() if use_cuda else model
 model = model.apply(weight_init)
 optimizer = optim.Adam(model.parameters(),lr=learning_rate, weight_decay=5e-4)
-criterion = nn.HuberLoss(delta=0.1,reduction='sum')
+#criterion = nn.HuberLoss(delta=0.1,reduction='sum')
+criterion = nn.MSELoss(reduction='sum')
+print(criterion)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10, gamma=0.1)
 print("All initialisation done.")
 
