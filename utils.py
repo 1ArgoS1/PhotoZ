@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 from torch.nn import functional as F
 import matplotlib.pyplot as plt
+import img_scale
 #----------------------------------------------------------------------------
 # NMAD as a loss function.
 def Metrics(prediction,z):
@@ -43,7 +44,18 @@ def format_(data,filename="temp"):
     return [avg_loss,avg_MAE,avg_nmad,avg_bias,avg_frac]
 
 #------------------------------------------------------------------------------
+class sky_removal():
+    def __init__(self, sigma=3, maxiter=10):
+        self.sigma=sigma
+        self.maxiter=maxiter
 
+    def __call__(self,data):
+        for i in range(data.shape[2]):
+            img_data = data[:,:,i]
+            sky, num_iter = img_scale.sky_median_sig_clip(img_data, self.sigma, 1e-5, self.maxiter)
+            img_data = img_data - sky
+            data[:,:,i] = img_scale.asinh(img_data, scale_min = 0, non_linear=0.1)
+        return data
 #-------------------------------------------------------
 class MyDataset(Dataset):
     def __init__(self, data, targets, mm=False, transform=None):
@@ -125,6 +137,62 @@ def plot_density(x, y, savepth=""):
     ax.set_ylim([0,0.60])
     ax.set_ylabel("zspec")
     plt.savefig(savepth)
+
+def plot_bias_zspec(x,y, savepth="",zoom=False):
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1, projection='scatter_density')
+    density = ax.scatter_density(x, y, cmap=white_viridis)
+    fig.colorbar(density, label='Number of points per pixel')
+
+    ax.set_title("Bias vs zspec")
+    ax.set_xlabel("Zspec")
+    if zoom:
+        ax.set_ylim([-0.1,0.1])
+    else:
+        ax.set_ylim([-0.2,0.2])
+    ax.set_xlim([0,0.60])
+    ax.set_ylabel("Bias")
+    plt.savefig(savepth)
+
+def ugriz_to_rgb(img_data):
+    # convert ugriz 5 band image to rgb image.
+    # Written by Min-Su Shin
+    # Department of Astronomy, University of Michigan (2009 - 2012)
+    # You can freely use the code.
+    # Parameters
+    sig_fract = 3.0
+    per_fract = 1.0e-4
+    max_iter = 50
+    min_val = 0.0
+    non_linear_fact = 0.1
+    ih,iw,ic = img_data.shape
+    rgb_array = np.empty((ih,iw,3), dtype=float)
+
+    # Blue filter
+    img_data_b = np.array(img_data[:,:,0], dtype=float)
+    sky, num_iter = img_scale.sky_median_sig_clip(img_data_b, sig_fract, per_fract, max_iter)
+    img_data_b = img_data_b - sky
+    b = img_scale.asinh(img_data_b, scale_min = min_val, non_linear=non_linear_fact)
+
+    # Green filter
+    img_data_g = np.array(img_data[:,:,1], dtype=float)
+    sky, num_iter = img_scale.sky_median_sig_clip(img_data_g, sig_fract, per_fract, max_iter)
+    img_data_g = img_data_g - sky
+    g = img_scale.asinh(img_data_g, scale_min = min_val, non_linear=non_linear_fact)
+
+    # Red filter
+    img_data_r = np.array(img_data[:,:,3], dtype=float)
+    sky, num_iter = img_scale.sky_median_sig_clip(img_data_r, sig_fract, per_fract, max_iter)
+    img_data_r = img_data_r - sky
+    r = img_scale.asinh(img_data_r, scale_min = min_val, non_linear=non_linear_fact)
+
+    rgb_array[:,:,0] = r
+    rgb_array[:,:,1] = g
+    rgb_array[:,:,2] = b
+    return rgb_array
+
+
+
 
 if __name__ == '__main__':
     # plot density test.
