@@ -70,7 +70,7 @@ if device :
 from utils import Metrics,format_,weight_init
 from models import *
 
-model = A4()
+model = A6()
 
 from torchinfo import summary
 summary(model,batch_dim=BATCH_SIZE)

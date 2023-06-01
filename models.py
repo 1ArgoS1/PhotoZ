@@ -470,13 +470,72 @@ class A5(nn.Module):
         return nn.Sequential(*layers)
 
 #-------------------------------------------------------------------
+# A4 model with linear layers replaced with transformers.
 class A6(nn.Module):
     def __init__(self):
-        super(A5,self).__init__()
+        super(A6,self).__init__()
+
+        # image part
+        self.cnn = nn.Sequential(
+        nn.Conv2d(5,32,3,padding=1),
+        nn.PReLU(),
+        nn.AvgPool2d(2,2),
+        Inception_block(32,16),
+        Transformer(64, 64, (16,16)),
+        Inception_block(64,16),
+        Transformer(64, 64, (16,16)),
+        Inception_block(64,16),
+        nn.AvgPool2d(2,2),
+        Inception_block(64,8),
+        Transformer(32, 32, (8,8)),
+        Inception_block(32,8),
+        Transformer(32, 32, (8,8)),
+        Inception_block(32,8),
+        nn.AvgPool2d(2,2),
+        Inception_block(32,4,True)
+        )
+
+        self.cnn2 = nn.Sequential(
+        nn.Linear(192,1096),
+        nn.Dropout(),
+        nn.PReLU(),
+        nn.Linear(1096,1096),
+        nn.Dropout(),
+        nn.PReLU()
+        )
+
+        # extra features
+        self.mixinp = nn.Sequential(
+        nn.Linear(5, 1024),
+        nn.Dropout(),
+        nn.PReLU(),
+        nn.Linear(1024,512),
+        nn.Dropout(),
+        nn.PReLU(),
+        nn.Linear(512,1024),
+        nn.Dropout(),
+        nn.PReLU()
+        )
+
+        #final part
+        self.final = nn.Sequential(
+        nn.Linear(2120,1024),
+        nn.Dropout(),
+        nn.PReLU(),
+        nn.Linear(1024,1)
+        )
 
 
-    def forward(self, x):
 
-        return x
+    def forward(self, x, w):
+        # combine both streams.
+        x = self.cnn(x)
+        x = torch.flatten(x,1)
+        x = self.cnn2(x)
+        w = self.mixinp(w)
+        u = torch.cat((x,w),1)
+        u = self.final(u)
+        return u
+
 
 #-------------------------------------------------------------------
